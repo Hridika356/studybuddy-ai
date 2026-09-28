@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../types/app'
-import { toPageRanges } from '../utils/pages'
+import { toPageRanges, type PageRange } from '../utils/pages'
 import { CitationChip } from './CitationChip'
 import { AlertIcon, RefreshIcon } from './Icons'
 
@@ -7,9 +7,16 @@ interface ChatMessageViewProps {
   message: ChatMessage
   onRetry?: (question: string) => void
   retryDisabled?: boolean
+  /** When provided, citation chips become buttons that open the PDF at the cited page. */
+  onOpenPage?: (range: PageRange) => void
 }
 
-export function ChatMessageView({ message, onRetry, retryDisabled }: ChatMessageViewProps) {
+export function ChatMessageView({
+  message,
+  onRetry,
+  retryDisabled,
+  onOpenPage,
+}: ChatMessageViewProps) {
   if (message.role === 'user') {
     return (
       <li className="message message--user">
@@ -52,7 +59,11 @@ export function ChatMessageView({ message, onRetry, retryDisabled }: ChatMessage
             <span key={index} className="answer__part">
               {part.text}
               {toPageRanges(part.pages).map((range) => (
-                <CitationChip key={`${range.start}-${range.end}`} range={range} />
+                <CitationChip
+                  key={`${range.start}-${range.end}`}
+                  range={range}
+                  onSelect={onOpenPage}
+                />
               ))}
             </span>
           ))}

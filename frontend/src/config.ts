@@ -16,4 +16,11 @@ export const config = {
   // AI calls send the whole PDF; allow generous time before giving up.
   aiRequestTimeoutMs: 120_000,
   defaultRequestTimeoutMs: 15_000,
+  // Follow-up context sent with /ask. Must not exceed the backend's MAX_HISTORY_TURNS /
+  // MAX_TURN_TEXT_LENGTH (schemas/ask.py), or the request is rejected with a 422.
+  maxHistoryTurns: 4,
+  maxHistoryTextLength: 4000,
+  // The free Render backend sleeps when idle and can take ~30–60s to boot.
+  serverWakeTimeoutMs: 90_000,
+  serverWakeNoticeDelayMs: 3_000,
 } as const

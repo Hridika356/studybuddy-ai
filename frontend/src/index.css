@@ -1139,3 +1139,30 @@ fieldset:disabled .option {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Backend wake-up status (free Render instance booting)
+   ========================================================================== */
+.status--waking .status__dot {
+  background: #d19a2a;
+  animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status--waking .status__dot {
+    animation: none;
+  }
+}

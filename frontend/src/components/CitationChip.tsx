@@ -11,12 +11,14 @@ export function CitationChip({ range, onSelect }: CitationChipProps) {
   const description = describePageRange(range)
 
   if (onSelect) {
+    const action = `${description}. Open the PDF at this page`
     return (
       <button
         type="button"
         className="citation-chip citation-chip--interactive"
         onClick={() => onSelect(range)}
-        aria-label={description}
+        aria-label={action}
+        title={action}
       >
         {label}
       </button>

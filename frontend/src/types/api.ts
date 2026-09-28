@@ -16,6 +16,12 @@ export interface AnswerPart {
   pages: number[]
 }
 
+/** One earlier question/answer pair, sent with /ask so follow-ups have context. */
+export interface ChatTurn {
+  question: string
+  answer: string
+}
+
 export interface AskResponse {
   parts: AnswerPart[]
 }

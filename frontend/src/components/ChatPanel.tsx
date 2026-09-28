@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { config } from '../config'
 import type { ChatMessage } from '../types/app'
+import type { PageRange } from '../utils/pages'
 import { ChatMessageView } from './ChatMessageView'
 import { ChatIcon, SendIcon } from './Icons'
 import { Spinner } from './Spinner'
@@ -16,9 +17,10 @@ interface ChatPanelProps {
   messages: ChatMessage[]
   pending: boolean
   onAsk: (question: string) => void
+  onOpenPage?: (range: PageRange) => void
 }
 
-export function ChatPanel({ filename, messages, pending, onAsk }: ChatPanelProps) {
+export function ChatPanel({ filename, messages, pending, onAsk, onOpenPage }: ChatPanelProps) {
   const inputId = useId()
   const counterId = useId()
   const [draft, setDraft] = useState('')
@@ -63,7 +65,8 @@ export function ChatPanel({ filename, messages, pending, onAsk }: ChatPanelProps
           </span>
           <h2 className="chat__empty-title">Ask anything about {filename}</h2>
           <p className="chat__empty-text">
-            Answers come only from your PDF, with page citations so you can check the source.
+            Answers come only from your PDF, with page citations you can click to check the source.
+            Follow-up questions work too, so ask “why?” or “give me an example”.
           </p>
           <div className="suggestions">
             {SUGGESTIONS.map((suggestion) => (
@@ -87,6 +90,7 @@ export function ChatPanel({ filename, messages, pending, onAsk }: ChatPanelProps
               message={message}
               onRetry={submit}
               retryDisabled={pending}
+              onOpenPage={onOpenPage}
             />
           ))}
           {pending && (
