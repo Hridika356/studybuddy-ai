@@ -22,7 +22,7 @@ Items are only marked COMPLETED after verification (tests, build, or a manual ru
   guard, retry, citation chips), quiz (one question at a time, feedback, explanation, score, retry,
   new quiz, return to chat). Verified by Vitest (22 tests) and a manual Chrome run incl. 373px mobile width.
 - Frontend `npm ci`, `lint` (oxlint, 0 warnings), `typecheck` (strict), `test`, `build`: all pass.
-- Backend `pytest` (60 passed), `ruff check`, `ruff format --check`: all pass.
+- Backend `pytest` (62 passed), `ruff check`, `ruff format --check`: all pass.
 - Browser console during the E2E run: no errors or warnings. CORS verified cross-origin (5173 → 8000).
 - Deployment config: `render.yaml` (backend), `frontend/vercel.json`. README deployment steps.
 - Security audit: no keys or secrets in tracked files, no API key in the frontend, no filesystem paths in responses.
@@ -42,18 +42,34 @@ Items are only marked COMPLETED after verification (tests, build, or a manual ru
   - The backend log shows all requests 200 with no warnings or errors, and the key value appears in neither
     the log, tracked files, nor the frontend source/build.
 
+- **Production deployment (2026-09-28)**:
+  - GitHub: https://github.com/Hridika356/studybuddy-ai (private, `main`). Secret scan across all history: 0 hits.
+  - Backend on Render: https://studybuddy-ai-api-0s4q.onrender.com (Blueprint, free plan, auto-deploys from `main`).
+  - Frontend on Vercel: https://studybuddy-ai-liart.vercel.app (root `frontend`, `VITE_API_BASE_URL` set).
+  - Render `ALLOWED_ORIGINS` = `https://studybuddy-ai-liart.vercel.app,http://localhost:5173`. The production
+    origin is allowed and others are refused (checked with a preflight request).
+  - API tests against Render: health, upload, `/ask` (citations correct: p.4 / p.2 / p.3), `/quiz` (5 valid
+    questions), and error paths (415/404/400/422 with clean JSON, no leaks).
+  - Chrome E2E on the live site: page load → "Connected" → upload → real answer with correct citation
+    chips → real quiz (5 questions) → scored 4/5, matching the per-question verdicts → no console errors,
+    no CORS errors.
+  - Found in production and fixed: literal `**bold**` markers in answers (Haiku ignored the no-Markdown
+    instruction). Paired bold and `#` headings are now stripped in `citation_parser.py` (the exponent
+    `x ** 2` and `__init__` are preserved). Covered by 2 new tests, pushed, Render redeployed in about 60s,
+    and re-verified on the live site (0 asterisks, citations intact).
+
 ## CURRENTLY WORKING ON
-- Nothing. Version 1 is complete and verified against the live Claude API.
+- Nothing. Version 1 is deployed and verified end-to-end in production.
 
 ## REMAINING
-- Actually deploy to Render + Vercel (requires the user's accounts).
-- Add screenshots / demo video / live URL to the README.
+- Add screenshots and a demo video to the README.
+- Optional: make the GitHub repo public for the portfolio.
 
 ## BUGS
 - None known.
 
 ## BLOCKERS
-- None. (Deployment waits on the user's go-ahead and accounts, which is not a technical blocker.)
+- None.
 
 ## TECHNICAL DEBT
 - In-memory, per-process rate limiter (not shared across instances; resets on restart).
@@ -67,7 +83,6 @@ Items are only marked COMPLETED after verification (tests, build, or a manual ru
 
 ## MANUAL STEPS REQUIRED FROM USER
 1. (Done) Real key added to `backend/.env` and verified live.
-2. Create the Render service (Blueprint from `render.yaml`) and set `ANTHROPIC_API_KEY` and `ALLOWED_ORIGINS`.
-3. Create the Vercel project (root `frontend`) and set `VITE_API_BASE_URL` to the Render URL.
-4. Add the Vercel URL to Render's `ALLOWED_ORIGINS`, then redeploy.
-5. Create a GitHub repo, push, and fill in the README placeholders.
+2. (Done) GitHub repo, Render backend, Vercel frontend, and CORS origin.
+3. Optional: add screenshots/demo video; decide on repo visibility; consider a paid Render instance or disk
+   if uploads must survive restarts.

@@ -6,7 +6,9 @@ answers **grounded only in that PDF with page citations**, then test yourself wi
 
 Built with React + TypeScript (Vite), FastAPI, SQLite, and the Anthropic Claude API.
 
-> **Live demo:** _coming soon_ · **Demo video:** _coming soon_ · **Repository:** _add GitHub URL here_
+> **Live demo:** https://studybuddy-ai-liart.vercel.app · **API:** https://studybuddy-ai-api-0s4q.onrender.com/health · **Demo video:** _coming soon_
+>
+> The free Render backend sleeps when idle, so the first request after a while can take 30–60 seconds.
 
 ---
 
@@ -122,7 +124,8 @@ from the document carry `citations`. For PDFs, each citation is a `page_location
 ```
 
 Page numbers come **only** from the API's citation metadata and are never guessed from the text.
-Whitespace-only blocks are merged into their neighbours. The frontend groups contiguous pages into
+Whitespace-only blocks are merged into their neighbours, and stray Markdown (`**bold**`, `# headings`) is
+stripped because the UI renders plain text. The frontend groups contiguous pages into
 chips (`p. 5–6`). `CitationChip` already accepts an optional `onSelect` handler, so chips can later
 become buttons that open the PDF at that page.
 
@@ -216,7 +219,7 @@ npm run dev                          # http://localhost:5173
 ## Testing
 
 ```bash
-# Backend: 60 tests, Claude fully mocked (no network, no cost)
+# Backend: 62 tests, Claude fully mocked (no network, no cost)
 cd backend && source .venv/bin/activate
 pytest -q
 ruff check . && ruff format --check .
