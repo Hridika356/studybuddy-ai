@@ -129,3 +129,13 @@ def test_quiz_invalid_doc_id(client):
     response = client.post("/quiz", json={"doc_id": "not-an-id"})
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invalid_doc_id"
+
+
+def test_quiz_retry_never_echoes_blank_assistant_turn(client, fake_claude, uploaded_doc):
+    fake_claude.messages.queue += [
+        text_response(plain("   ")),
+        text_response(plain(valid_quiz_json())),
+    ]
+    response = client.post("/quiz", json={"doc_id": uploaded_doc["doc_id"]})
+    assert response.status_code == 200
+    assert fake_claude.messages.calls[1]["messages"][1]["content"] == "(empty response)"

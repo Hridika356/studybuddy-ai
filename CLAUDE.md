@@ -23,7 +23,8 @@ React (Vite, TS)  --HTTP/JSON-->  FastAPI backend  --> SQLite (document metadata
 ## Stack
 - Backend: Python 3.11+ (tested on 3.13), FastAPI, Uvicorn, Pydantic v2, python-multipart, python-dotenv,
   anthropic SDK, pypdf (PDF validation + page count). Stdlib `sqlite3` behind a repository class.
-- Frontend: React 19 + Vite + TypeScript, plain CSS (CSS variables), Vitest + Testing Library.
+- Frontend: React 19 + Vite 8 + TypeScript (strict), plain CSS (CSS variables, light/dark), oxlint,
+  Vitest + Testing Library.
 - Hosting: backend on Render (`render.yaml`), frontend on Vercel (`frontend/vercel.json`).
 
 ## Directory structure
@@ -42,10 +43,11 @@ backend/
   tests/               pytest; Anthropic client is always mocked
 frontend/
   src/
-    components/        UploadCard, ChatPanel, CitationChip, QuizPanel, ...
+    components/        AppHeader, UploadCard, DocumentBar, ChatPanel, ChatMessageView, CitationChip,
+                       QuizPanel, QuizQuestionCard, QuizResults, Icons, Spinner
     pages/             StudyPage (top-level state)
     services/api.ts    ALL backend calls go through here
-    types/             shared API types (mirror backend schemas)
+    types/             api.ts mirrors backend schemas; app.ts holds UI state types
     utils/             formatting helpers (page ranges)
 ```
 
@@ -61,7 +63,7 @@ ruff check .
 # frontend
 cd frontend && npm install
 npm run dev          # http://localhost:5173
-npm run lint
+npm run lint         # oxlint --deny-warnings
 npm run typecheck
 npm test             # vitest run
 npm run build
@@ -89,12 +91,15 @@ npm run build
 - `doc_id` is validated as a UUID hex before any filesystem access.
 
 ## Testing
+- Local sandboxed sessions: binding/connecting to localhost ports and pip/npm network access may need the
+  sandbox relaxed; use a session-local npm cache (`npm_config_cache=$TMPDIR/npm-cache`) if ~/.npm is not writable.
 - Backend: `cd backend && pytest -q` (mocks Claude; no network, no cost).
 - Frontend: `npm run lint && npm run typecheck && npm test && npm run build`.
 
 ## Deployment
-- Render: root `backend`, build `pip install -r requirements.txt`,
-  start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `ANTHROPIC_API_KEY`, `ALLOWED_ORIGINS`.
+- Render (`render.yaml` Blueprint): root `backend`, build `pip install -r requirements.txt`,
+  start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `ANTHROPIC_API_KEY`, `ALLOWED_ORIGINS`,
+  `FORWARDED_ALLOW_IPS=*` (so rate limiting sees real client IPs behind Render's proxy).
 - Vercel: root `frontend`, build `npm run build`, output `dist`, env `VITE_API_BASE_URL`.
 
 ## Known limitations (V1)

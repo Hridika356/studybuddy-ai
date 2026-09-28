@@ -1,0 +1,31 @@
+# Render Blueprint for the StudyBuddy AI backend.
+# Render dashboard -> New -> Blueprint -> select this repo. Secrets marked `sync: false`
+# are prompted for in the dashboard and are never stored in this file.
+services:
+  - type: web
+    name: studybuddy-ai-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.7
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false # e.g. https://your-app.vercel.app
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5-20251001
+      - key: MAX_PDF_SIZE_MB
+        value: "10"
+      - key: RATE_LIMIT_REQUESTS
+        value: "10"
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: "60"
+      # Render's proxy is the only thing that can reach the service, so trust its
+      # X-Forwarded-For header; otherwise every user shares the proxy's IP for rate limiting.
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
