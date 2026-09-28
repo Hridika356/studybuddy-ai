@@ -1,0 +1,8 @@
+# Runtime dependencies (installed on Render)
+fastapi==0.141.1
+uvicorn==0.54.0
+pydantic==2.13.5
+python-multipart==0.0.32
+python-dotenv==1.2.3
+anthropic==1.8.0
+pypdf==6.19.0
