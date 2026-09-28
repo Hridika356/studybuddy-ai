@@ -24,7 +24,6 @@ htmlcov/
 
 # ---- App data (runtime) ----
 uploads/
-!backend/uploads/.gitkeep
 *.db
 *.sqlite
 *.sqlite3
