@@ -22,7 +22,7 @@ Items are only marked COMPLETED after verification (tests, build, or a manual ru
   guard, retry, citation chips), quiz (one question at a time, feedback, explanation, score, retry,
   new quiz, return to chat). Verified by Vitest (22 tests) and a manual Chrome run incl. 373px mobile width.
 - Frontend `npm ci`, `lint` (oxlint, 0 warnings), `typecheck` (strict), `test`, `build`: all pass.
-- Backend `pytest` (62 passed), `ruff check`, `ruff format --check`: all pass.
+- Backend `pytest` (72 passed), `ruff check`, `ruff format --check`: all pass.
 - Browser console during the E2E run: no errors or warnings. CORS verified cross-origin (5173 → 8000).
 - Deployment config: `render.yaml` (backend), `frontend/vercel.json`. README deployment steps.
 - Security audit: no keys or secrets in tracked files, no API key in the frontend, no filesystem paths in responses.
@@ -58,6 +58,14 @@ Items are only marked COMPLETED after verification (tests, build, or a manual ru
     `x ** 2` and `__init__` are preserved). Covered by 2 new tests, pushed, Render redeployed in about 60s,
     and re-verified on the live site (0 asterisks, citations intact).
 
+- **Follow-ups, clickable citations, cold-start status (branch `feature/followups-citations-coldstart`)**:
+  - `/ask` accepts `history` (≤4 `ChatTurn`s, each 1–4000 chars, blank rejected) → alternating turns with
+    the document block only on the first user turn. With no history the request is unchanged.
+  - Citation chips open the local PDF copy at `#page=N` in a new tab; the object URL is revoked on replace.
+  - The header shows "Waking server… up to 1 min" after 3s and retries `/health` every 3s for up to 90s.
+  - Tests: backend 72 (10 new), frontend 37 (15 new: history util, API body, follow-up flow, chip click,
+    revoke, AppHeader wake cycle).
+
 ## CURRENTLY WORKING ON
 - Nothing. Version 1 is deployed and verified end-to-end in production.
 
@@ -76,7 +84,7 @@ Items are only marked COMPLETED after verification (tests, build, or a manual ru
 - Local-disk storage + SQLite are ephemeral on Render's free tier.
 - Frontend upload limits (`VITE_MAX_PDF_SIZE_MB`, `VITE_MAX_QUESTION_LENGTH`, 100 pages) duplicate the
   backend values and must be kept in sync manually.
-- Each question is answered independently (no multi-turn context).
+- Follow-ups only see the last 4 turns; the frontend/backend history limits must be kept in sync manually.
 - Answer quality: Haiku occasionally adds a short, uncited paraphrase between cited sentences (seen once:
   "more than 75% of your buckets filled", a loose restatement of load factor). Consider tightening the
   prompt so uncited elaboration is minimized or clearly marked, then re-verify live.

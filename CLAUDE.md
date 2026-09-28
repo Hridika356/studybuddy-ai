@@ -48,7 +48,7 @@ frontend/
     pages/             StudyPage (top-level state)
     services/api.ts    ALL backend calls go through here
     types/             api.ts mirrors backend schemas; app.ts holds UI state types
-    utils/             formatting helpers (page ranges)
+    utils/             page ranges, file validation, buildHistory (follow-up context)
 ```
 
 ## Commands
@@ -79,7 +79,9 @@ npm run build
 ## API conventions
 - `GET /health` → `{"status": "ok"}`
 - `POST /upload` (multipart `file`) → `{"doc_id", "filename", "page_count"}`
-- `POST /ask` `{"doc_id","question"}` → `{"parts": [{"text","pages": [int]}]}`
+- `POST /ask` `{"doc_id","question","history"?: [{"question","answer"}] (max 4, each 1–4000 chars)}`
+  → `{"parts": [{"text","pages": [int]}]}`. History becomes alternating user/assistant turns; the
+  document block leads only the first user turn (keeps the cached prefix stable).
 - `POST /quiz` `{"doc_id"}` → `{"questions": [{"question","options"[4],"correct_answer","explanation"}]}`
 - Errors: `{"error": {"code": "snake_case_code", "message": "Human readable"}}` with proper HTTP status.
 - Never expose filesystem paths or stored filenames.
@@ -106,4 +108,5 @@ npm run build
 - Render free-tier disk is ephemeral: uploads + SQLite vanish on restart/redeploy.
 - Rate limiting is in-memory per process (resets on restart, not shared across instances).
 - Whole PDF is sent each request; max 100 pages (Haiku 4.5 PDF limit) and `MAX_PDF_SIZE_MB`.
-- Chat history is per browser session only; each question is answered independently (no multi-turn context).
+- Chat history is per browser session only; follow-ups see only the last 4 answered turns
+  (`config.maxHistoryTurns` in the frontend, `MAX_HISTORY_TURNS` in `schemas/ask.py`; keep in sync).
