@@ -32,5 +32,7 @@ def ask(
     loaded = documents.load(body.doc_id)
     rate_limit.check()
     return AskResponse(
-        parts=claude.answer_question(loaded.data, loaded.document.original_filename, body.question)
+        parts=claude.answer_question(
+            loaded.data, loaded.document.original_filename, body.question, body.history
+        )
     )
