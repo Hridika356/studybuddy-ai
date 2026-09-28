@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import * as api from '../services/api'
 import type { AskResponse, QuizQuestion } from '../types/api'
 import { StudyPage } from './StudyPage'
@@ -86,7 +86,7 @@ describe('StudyPage main flow', () => {
     expect(send).toBeDisabled() // empty input
 
     await user.type(input, 'What is a stack?{Enter}')
-    expect(mockedApi.askQuestion).toHaveBeenCalledWith('doc123', 'What is a stack?')
+    expect(mockedApi.askQuestion).toHaveBeenCalledWith('doc123', 'What is a stack?', [])
     expect(screen.getByText('Reading your notes…')).toBeInTheDocument()
 
     // A second Enter while waiting must not send a duplicate request.
@@ -121,7 +121,8 @@ describe('StudyPage main flow', () => {
 
     await user.click(screen.getByRole('button', { name: /try again/i }))
     expect(await screen.findByText('Recovered answer.')).toBeInTheDocument()
-    expect(mockedApi.askQuestion).toHaveBeenLastCalledWith('doc123', 'Explain recursion')
+    // The failed attempt has no answer, so it is not sent as history.
+    expect(mockedApi.askQuestion).toHaveBeenLastCalledWith('doc123', 'Explain recursion', [])
   })
 
   it('runs a full quiz and scores it', async () => {
@@ -180,5 +181,98 @@ describe('StudyPage main flow', () => {
     expect(await screen.findByText('Quiz failed.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Question 1 of 5')).toBeInTheDocument()
+  })
+
+  it('sends the previous question and answer as history on a follow-up', async () => {
+    const user = userEvent.setup()
+    render(<StudyPage />)
+    await uploadLecture(user)
+    mockedApi.askQuestion
+      .mockResolvedValueOnce({
+        parts: [
+          { text: 'A stack is LIFO.', pages: [2] },
+          { text: ' Push adds to the top.', pages: [2] },
+        ],
+      })
+      .mockResolvedValueOnce({ parts: [{ text: 'Like a stack of plates.', pages: [2] }] })
+
+    const input = screen.getByLabelText('Your question')
+    await user.type(input, 'What is a stack?{Enter}')
+    await screen.findByText('A stack is LIFO.')
+    await user.type(input, 'Give me an example{Enter}')
+    await screen.findByText('Like a stack of plates.')
+
+    expect(mockedApi.askQuestion).toHaveBeenNthCalledWith(1, 'doc123', 'What is a stack?', [])
+    expect(mockedApi.askQuestion).toHaveBeenNthCalledWith(2, 'doc123', 'Give me an example', [
+      { question: 'What is a stack?', answer: 'A stack is LIFO. Push adds to the top.' },
+    ])
+  })
+
+  it('opens the uploaded PDF at the cited page when a citation chip is clicked', async () => {
+    const originalCreate = URL.createObjectURL
+    URL.createObjectURL = vi.fn(() => 'blob:mock-pdf')
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+    onTestFinished(() => {
+      URL.createObjectURL = originalCreate
+      openSpy.mockRestore()
+    })
+
+    const user = userEvent.setup()
+    render(<StudyPage />)
+    await uploadLecture(user)
+    mockedApi.askQuestion.mockResolvedValue({ parts: [{ text: 'Load factor 0.75.', pages: [4] }] })
+    await user.type(screen.getByLabelText('Your question'), 'When does it resize?{Enter}')
+
+    const chip = await screen.findByRole('button', {
+      name: 'Cited from page 4. Open the PDF at this page',
+    })
+    await user.click(chip)
+    expect(openSpy).toHaveBeenCalledWith('blob:mock-pdf#page=4', '_blank')
+  })
+
+  it('renders plain (non-clickable) chips when no local file URL is available', async () => {
+    // Node (under Vitest) provides URL.createObjectURL, so remove it to simulate an environment
+    // without it; UploadCard's guard should then leave the chips non-clickable.
+    const original = URL.createObjectURL
+    Object.defineProperty(URL, 'createObjectURL', { value: undefined, configurable: true, writable: true })
+    onTestFinished(() => {
+      Object.defineProperty(URL, 'createObjectURL', { value: original, configurable: true, writable: true })
+    })
+
+    const user = userEvent.setup()
+    render(<StudyPage />)
+    await uploadLecture(user)
+    mockedApi.askQuestion.mockResolvedValue({ parts: [{ text: 'Cited.', pages: [3] }] })
+    await user.type(screen.getByLabelText('Your question'), 'Q{Enter}')
+    await screen.findByText('Cited.')
+    expect(screen.queryByRole('button', { name: /Open the PDF/ })).not.toBeInTheDocument()
+    expect(screen.getByText('p. 3')).toBeInTheDocument()
+  })
+
+  it('revokes the previous object URL when the PDF is replaced', async () => {
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    let n = 0
+    URL.createObjectURL = vi.fn(() => `blob:pdf-${++n}`)
+    const revoke = vi.fn()
+    URL.revokeObjectURL = revoke
+    onTestFinished(() => {
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    })
+
+    const user = userEvent.setup()
+    render(<StudyPage />)
+    await uploadLecture(user)
+    expect(revoke).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Replace PDF' }))
+    mockedApi.uploadPdf.mockResolvedValue({ doc_id: 'doc456', filename: 'week2.pdf', page_count: 3 })
+    await user.upload(
+      screen.getByLabelText(/drag & drop a pdf/i),
+      new File(['%PDF-1.4'], 'week2.pdf', { type: 'application/pdf' }),
+    )
+    await screen.findByText('week2.pdf')
+    expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:pdf-1')
   })
 })

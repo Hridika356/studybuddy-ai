@@ -2,6 +2,7 @@ import { config } from '../config'
 import type {
   ApiErrorBody,
   AskResponse,
+  ChatTurn,
   HealthResponse,
   QuizResponse,
   UploadResponse,
@@ -90,12 +91,20 @@ function postJson<T>(path: string, payload: unknown, timeoutMs: number): Promise
   )
 }
 
-export function checkHealth(): Promise<HealthResponse> {
-  return requestJson<HealthResponse>('/health', { method: 'GET' }, config.defaultRequestTimeoutMs)
+export function checkHealth(
+  timeoutMs: number = config.defaultRequestTimeoutMs,
+): Promise<HealthResponse> {
+  return requestJson<HealthResponse>('/health', { method: 'GET' }, timeoutMs)
 }
 
-export function askQuestion(docId: string, question: string): Promise<AskResponse> {
-  return postJson<AskResponse>('/ask', { doc_id: docId, question }, config.aiRequestTimeoutMs)
+export function askQuestion(
+  docId: string,
+  question: string,
+  history: ChatTurn[] = [],
+): Promise<AskResponse> {
+  // Omit `history` when empty so a first question sends exactly the same body as before.
+  const body = history.length > 0 ? { doc_id: docId, question, history } : { doc_id: docId, question }
+  return postJson<AskResponse>('/ask', body, config.aiRequestTimeoutMs)
 }
 
 export function generateQuiz(docId: string): Promise<QuizResponse> {

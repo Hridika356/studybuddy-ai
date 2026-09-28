@@ -4,6 +4,8 @@ export interface StudyDocument {
   docId: string
   filename: string
   pageCount: number
+  /** Browser-local object URL for the uploaded file, used to open it at a cited page. */
+  fileUrl?: string
 }
 
 export type ChatMessage =

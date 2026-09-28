@@ -3,9 +3,12 @@ import { ChatPanel } from '../components/ChatPanel'
 import { DocumentBar } from '../components/DocumentBar'
 import { QuizPanel } from '../components/QuizPanel'
 import { UploadCard } from '../components/UploadCard'
+import { config } from '../config'
 import { askQuestion, errorMessage, generateQuiz } from '../services/api'
 import type { ChatMessage, QuizState, StudyDocument } from '../types/app'
+import { buildHistory } from '../utils/history'
 import { nextId } from '../utils/id'
+import type { PageRange } from '../utils/pages'
 
 type View = 'chat' | 'quiz'
 
@@ -24,6 +27,11 @@ export function StudyPage() {
   const quizCounter = useRef(0)
 
   function handleUploaded(uploaded: StudyDocument) {
+    // Free the previous file's object URL here rather than in an effect cleanup: StrictMode's
+    // double-mount would otherwise revoke a URL that is still in use.
+    if (document?.fileUrl && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(document.fileUrl)
+    }
     activeDocId.current = uploaded.docId
     setDocument(uploaded)
     setReplacing(false)
@@ -38,13 +46,15 @@ export function StudyPage() {
   async function handleAsk(question: string) {
     if (!document || askInFlight.current) return
     const docId = document.docId
+    // Earlier answered turns (not including this question) give follow-ups their context.
+    const history = buildHistory(messages, config.maxHistoryTurns, config.maxHistoryTextLength)
     askInFlight.current = true
     setAsking(true)
     setMessages((prev) => [...prev, { id: nextId('q'), role: 'user', text: question }])
 
     let reply: ChatMessage
     try {
-      const answer = await askQuestion(docId, question)
+      const answer = await askQuestion(docId, question, history)
       reply = { id: nextId('a'), role: 'assistant', parts: answer.parts }
     } catch (error) {
       reply = { id: nextId('e'), role: 'error', text: errorMessage(error), retryQuestion: question }
@@ -72,6 +82,12 @@ export function StudyPage() {
     } finally {
       if (activeDocId.current === docId) quizInFlight.current = false
     }
+  }
+
+  function openPdfAtPage(range: PageRange) {
+    if (!document?.fileUrl) return
+    // No "noopener": some browsers open blob: URLs as a blank tab when it is set.
+    window.open(`${document.fileUrl}#page=${range.start}`, '_blank')
   }
 
   function handleQuizButton() {
@@ -128,6 +144,7 @@ export function StudyPage() {
           messages={messages}
           pending={asking}
           onAsk={(question) => void handleAsk(question)}
+          onOpenPage={document.fileUrl ? openPdfAtPage : undefined}
         />
       </div>
       {view === 'quiz' && (

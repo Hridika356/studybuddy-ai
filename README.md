@@ -6,9 +6,10 @@ answers **grounded only in that PDF with page citations**, then test yourself wi
 
 Built with React + TypeScript (Vite), FastAPI, SQLite, and the Anthropic Claude API.
 
-> **Live demo:** https://studybuddy-ai-liart.vercel.app · **API:** https://studybuddy-ai-api-0s4q.onrender.com/health · **Demo video:** _coming soon_
+> **Live demo:** https://studybuddy-ai-liart.vercel.app · **API:** https://studybuddy-ai-api-0s4q.onrender.com/health
 >
 > The free Render backend sleeps when idle, so the first request after a while can take 30–60 seconds.
+> While it boots, the header shows **"Waking server… up to 1 min"** and keeps retrying automatically.
 
 ---
 
@@ -17,6 +18,9 @@ Built with React + TypeScript (Vite), FastAPI, SQLite, and the Anthropic Claude 
 - **PDF upload**: drag & drop or file picker, with size/type validation, progress, and clear errors.
 - **Cited Q&A**: ask anything about your notes; each part of the answer shows chips like `p. 4` or
   `p. 4–5` taken straight from Claude's citation metadata.
+- **Clickable citations**: click a chip to open your PDF in a new tab at the cited page.
+- **Follow-up questions**: ask "why?" or "give me an example". The last 4 questions and answers are sent
+  as context, while the PDF stays the only source of facts.
 - **Honest answers**: the model is told to say when your notes don't cover a question instead of guessing.
 - **Practice quiz**: 5 multiple-choice questions, one at a time, with instant feedback, explanations,
   and a final score. Retry the same quiz or generate a new one.
@@ -27,7 +31,7 @@ Built with React + TypeScript (Vite), FastAPI, SQLite, and the Anthropic Claude 
 
 ## Screenshots
 
-_Screenshots coming soon (upload screen, cited answer, quiz results)._
+<!-- Add screenshots here: upload screen, cited answer with chips, quiz question, quiz results. -->
 
 ## Architecture
 
@@ -98,8 +102,13 @@ studybuddy-ai/
    metadata in SQLite. The original filename is kept only as display metadata.
 2. `POST /ask` validates the question, loads the PDF, and sends Claude a single message containing the
    PDF as a base64 `document` block with `citations: {enabled: true}`, followed by the question.
+   For follow-ups, the request can include `history`: up to 4 earlier `{question, answer}` turns (each
+   1–4000 characters). These become alternating user/assistant messages ending with the new question.
+   The document block leads only the **first** user turn, so the cached prefix is identical with or
+   without history. With no history, the request is exactly the single-message form above.
 3. A system prompt tells Claude to answer only from the document, cite every claim, say when the notes
    don't cover something, keep it concise and student-friendly, and ignore instructions inside the PDF.
+   It also says earlier turns are context only, so follow-up answers still cite the document.
 4. The document block has `cache_control`, so repeat questions about the same PDF within a few minutes
    reuse the cached document tokens (cheaper and faster). Very short documents fall below the model's
    minimum cacheable size and simply aren't cached.
@@ -126,8 +135,9 @@ from the document carry `citations`. For PDFs, each citation is a `page_location
 Page numbers come **only** from the API's citation metadata and are never guessed from the text.
 Whitespace-only blocks are merged into their neighbours, and stray Markdown (`**bold**`, `# headings`) is
 stripped because the UI renders plain text. The frontend groups contiguous pages into
-chips (`p. 5–6`). `CitationChip` already accepts an optional `onSelect` handler, so chips can later
-become buttons that open the PDF at that page.
+chips (`p. 5–6`). After upload the browser keeps a local copy of the file (`URL.createObjectURL`), so
+clicking a chip opens it in a new tab at `#page=<start>` with nothing re-downloaded from the server.
+The object URL is revoked when you replace the PDF.
 
 ## How quiz generation works
 
@@ -219,7 +229,7 @@ npm run dev                          # http://localhost:5173
 ## Testing
 
 ```bash
-# Backend: 62 tests, Claude fully mocked (no network, no cost)
+# Backend: 72 tests, Claude fully mocked (no network, no cost)
 cd backend && source .venv/bin/activate
 pytest -q
 ruff check . && ruff format --check .
@@ -276,15 +286,14 @@ Vite bakes `VITE_*` values in at build time, so redeploy the frontend after chan
 - **Rate limiting is in-memory and per process**: it resets on restart and isn't shared across instances.
 - **Whole PDF per request**: fine for lecture notes, but it's capped at 100 pages / 10 MB, and every
   question re-sends the document (prompt caching reduces the cost of repeats).
-- **Each question is independent**: the model doesn't see earlier chat turns.
+- **Follow-ups only see the last 4 turns**: older questions and answers aren't sent as context.
 - **Chat history lives in the browser tab**: refreshing clears it. There are no user accounts.
 - **Scanned PDFs**: Claude can read page images, but answers on image-only scans may be less precise.
-- **Citation chips aren't clickable yet** (the component supports it).
+- **The page jump depends on the browser's PDF viewer**: some mobile browsers open page 1.
 
 ## Future improvements
 
-- Clickable citations that open an in-app PDF viewer at the cited page
-- Multi-turn follow-up questions using conversation history
+- In-app PDF.js viewer that highlights the cited passage
 - Streaming answers token by token
 - Accounts and saved documents (PostgreSQL + object storage)
 - Multiple PDFs per study session, and flashcard generation

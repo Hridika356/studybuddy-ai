@@ -23,6 +23,19 @@ describe('api service', () => {
     expect(JSON.parse(String(init?.body))).toEqual({ doc_id: 'abc', question: 'What is a stack?' })
   })
 
+  it('omits history from the body when empty and includes it when present', async () => {
+    const spy = mockFetch(async () => Response.json({ parts: [] }))
+    await askQuestion('abc', 'First?')
+    await askQuestion('abc', 'Follow-up?', [{ question: 'First?', answer: 'Answer.' }])
+
+    expect(JSON.parse(String(spy.mock.calls[0][1]?.body))).toEqual({ doc_id: 'abc', question: 'First?' })
+    expect(JSON.parse(String(spy.mock.calls[1][1]?.body))).toEqual({
+      doc_id: 'abc',
+      question: 'Follow-up?',
+      history: [{ question: 'First?', answer: 'Answer.' }],
+    })
+  })
+
   it('surfaces the backend error message and code', async () => {
     mockFetch(async () =>
       Response.json(
