@@ -38,7 +38,16 @@ export function UploadCard({ onUploaded, onCancel }: UploadCardProps) {
         setStatus({ kind: 'uploading', progress }),
       )
       setStatus({ kind: 'idle' })
-      onUploaded({ docId: result.doc_id, filename: result.filename, pageCount: result.page_count })
+      // A browser-local copy of the file lets citation chips open it at the cited page.
+      // Guarded because some environments (older jsdom, unusual browsers) lack createObjectURL.
+      const fileUrl =
+        typeof URL.createObjectURL === 'function' ? URL.createObjectURL(file) : undefined
+      onUploaded({
+        docId: result.doc_id,
+        filename: result.filename,
+        pageCount: result.page_count,
+        fileUrl,
+      })
     } catch (error) {
       setStatus({ kind: 'error', message: errorMessage(error) })
     } finally {
