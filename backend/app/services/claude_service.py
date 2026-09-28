@@ -198,7 +198,8 @@ class ClaudeService:
             except QuizParseError as exc:
                 logger.warning("Quiz parse failed on attempt %d: %s", attempt, exc)
                 messages += [
-                    {"role": "assistant", "content": raw or "(empty response)"},
+                    # The API rejects whitespace-only text blocks, so substitute a placeholder.
+                    {"role": "assistant", "content": raw.strip() or "(empty response)"},
                     {
                         "role": "user",
                         "content": QUIZ_CORRECTION_PROMPT.format(

@@ -12,6 +12,7 @@ from app.config import Settings, get_settings
 from app.db import Database, DocumentRepository
 from app.errors import register_error_handlers
 from app.routes import ask, documents, health, quiz
+from app.schemas.common import ErrorResponse
 from app.services.claude_service import ClaudeService
 from app.services.document_service import DocumentService
 from app.services.storage_service import StorageService
@@ -61,8 +62,10 @@ def create_app(settings: Settings | None = None, claude_client: Any | None = Non
     )
     register_error_handlers(app)
 
+    # Documents the shared {"error": {...}} shape for every non-2xx response in /docs.
+    error_responses = {"4XX": {"model": ErrorResponse}, "5XX": {"model": ErrorResponse}}
     for router in (health.router, documents.router, ask.router, quiz.router):
-        app.include_router(router)
+        app.include_router(router, responses=error_responses)
 
     if not settings.ai_configured and claude_client is None:
         logger.warning("ANTHROPIC_API_KEY is not set: /ask and /quiz will return 503")
