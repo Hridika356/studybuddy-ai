@@ -151,3 +151,106 @@ def test_invalid_requests_do_not_consume_rate_limit(app_factory):
     client = app_factory(rate_limit_requests=1)
     for _ in range(3):
         assert ask(client, "0" * 32).status_code == 404
+
+
+# ---- follow-up history ------------------------------------------------------------------------
+
+
+def _history(n: int) -> list[dict]:
+    return [{"question": f"Q{i}?", "answer": f"A{i}."} for i in range(1, n + 1)]
+
+
+def test_history_builds_alternating_turns_in_order(client, fake_claude, uploaded_doc):
+    fake_claude.messages.queue.append(text_response(cited("Follow-up answer.", 2)))
+    response = client.post(
+        "/ask",
+        json={"doc_id": uploaded_doc["doc_id"], "question": "And queues?", "history": _history(2)},
+    )
+    assert response.status_code == 200
+    messages = fake_claude.messages.calls[0]["messages"]
+    assert [m["role"] for m in messages] == ["user", "assistant", "user", "assistant", "user"]
+    assert messages[0]["content"][-1] == {"type": "text", "text": "Q1?"}
+    assert messages[1]["content"] == "A1."
+    assert messages[2]["content"] == [{"type": "text", "text": "Q2?"}]
+    assert messages[3]["content"] == "A2."
+    assert messages[4]["content"] == [{"type": "text", "text": "And queues?"}]
+
+
+def test_document_block_only_leads_first_user_turn(client, fake_claude, uploaded_doc):
+    fake_claude.messages.queue += [text_response(plain("ok")), text_response(plain("ok"))]
+    doc_id = uploaded_doc["doc_id"]
+    client.post("/ask", json={"doc_id": doc_id, "question": "Now?", "history": _history(3)})
+    client.post("/ask", json={"doc_id": doc_id, "question": "Now?"})
+    with_history, without_history = (c["messages"] for c in fake_claude.messages.calls)
+
+    def doc_blocks(message):
+        content = message["content"]
+        return [b for b in content if isinstance(b, dict) and b.get("type") == "document"]
+
+    assert len(doc_blocks(with_history[0])) == 1
+    assert with_history[0]["content"][0]["type"] == "document"
+    assert all(not doc_blocks(m) for m in with_history[1:] if isinstance(m["content"], list))
+    # Same cached prefix with or without history: identical document block (incl. cache_control).
+    assert with_history[0]["content"][0] == without_history[0]["content"][0]
+    assert with_history[0]["content"][0]["cache_control"] == {"type": "ephemeral"}
+    assert with_history[0]["content"][0]["citations"] == {"enabled": True}
+
+
+def test_no_history_sends_single_message_exactly_as_before(client, fake_claude, uploaded_doc):
+    fake_claude.messages.queue.append(text_response(plain("ok")))
+    client.post("/ask", json={"doc_id": uploaded_doc["doc_id"], "question": "What is a stack?"})
+    messages = fake_claude.messages.calls[0]["messages"]
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
+    doc_block, question_block = messages[0]["content"]
+    assert doc_block["type"] == "document"
+    assert question_block == {"type": "text", "text": "What is a stack?"}
+
+
+def test_empty_history_list_matches_no_history(client, fake_claude, uploaded_doc):
+    fake_claude.messages.queue += [text_response(plain("ok")), text_response(plain("ok"))]
+    doc_id = uploaded_doc["doc_id"]
+    client.post("/ask", json={"doc_id": doc_id, "question": "Q"})
+    client.post("/ask", json={"doc_id": doc_id, "question": "Q", "history": []})
+    first, second = fake_claude.messages.calls
+    assert first == second
+
+
+def test_more_than_four_history_turns_is_rejected(client, fake_claude, uploaded_doc):
+    response = client.post(
+        "/ask",
+        json={"doc_id": uploaded_doc["doc_id"], "question": "Q?", "history": _history(5)},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+    assert fake_claude.messages.calls == []
+
+
+@pytest.mark.parametrize(
+    "turn",
+    [
+        {"question": "", "answer": "A."},
+        {"question": "Q?", "answer": "   "},
+        {"question": "Q?", "answer": "x" * 4001},
+        {"question": "Q?"},
+    ],
+    ids=["empty-question", "blank-answer", "answer-too-long", "missing-answer"],
+)
+def test_invalid_history_turn_is_rejected(client, fake_claude, uploaded_doc, turn):
+    response = client.post(
+        "/ask", json={"doc_id": uploaded_doc["doc_id"], "question": "Q?", "history": [turn]}
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+    assert fake_claude.messages.calls == []
+
+
+def test_system_prompt_tells_model_to_recite_document_on_follow_ups(
+    client, fake_claude, uploaded_doc
+):
+    fake_claude.messages.queue.append(text_response(plain("ok")))
+    client.post(
+        "/ask", json={"doc_id": uploaded_doc["doc_id"], "question": "Q", "history": _history(1)}
+    )
+    system = fake_claude.messages.calls[0]["system"]
+    assert "Earlier turns" in system and "cite it again" in system
