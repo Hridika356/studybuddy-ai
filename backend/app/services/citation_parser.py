@@ -4,14 +4,24 @@ With citations enabled, Claude splits its answer into several `text` blocks. Blo
 claim from the document carry `citations`; for PDFs each is a `page_location` whose
 `start_page_number` is 1-indexed and `end_page_number` is exclusive. Page numbers come only from
 that metadata — we never infer them from the text.
+
+The UI renders answers as plain text. The system prompt asks for no Markdown, but the model
+occasionally still emits bold markers or headings, so those are stripped here.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from typing import Any
 
 from app.schemas.ask import AnswerPart
+
+# Only unambiguous Markdown is removed: paired "**bold**" hugging its text, and line-leading "#"
+# headings. Single "*", "__", and spaced "**" are left alone because they can be real content in
+# notes (e.g. "a * b", Python's __init__, the exponent in "x ** 2").
+_BOLD = re.compile(r"\*\*(?=\S)(.+?)(?<=\S)\*\*", re.DOTALL)
+_HEADING_PREFIX = re.compile(r"^[ \t]*#{1,6}[ \t]+", re.MULTILINE)
 
 
 def _get(obj: Any, name: str) -> Any:
@@ -33,12 +43,16 @@ def pages_from_citation(citation: Any) -> list[int]:
     return list(range(start, end))
 
 
+def strip_markdown(text: str) -> str:
+    return _HEADING_PREFIX.sub("", _BOLD.sub(r"\1", text))
+
+
 def parse_cited_answer(content_blocks: Iterable[Any]) -> list[AnswerPart]:
     parts: list[AnswerPart] = []
     for block in content_blocks:
         if _get(block, "type") != "text":
             continue
-        text = _get(block, "text") or ""
+        text = strip_markdown(_get(block, "text") or "")
         pages = sorted(
             {
                 page
