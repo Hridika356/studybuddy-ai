@@ -1,5 +1,3 @@
-"""Upload validation and document lookup. Combines storage (disk) and repository (SQLite)."""
-
 from __future__ import annotations
 
 import logging
@@ -105,7 +103,6 @@ class DocumentService:
         return document
 
     def load(self, doc_id: str) -> LoadedDocument:
-        """Fetch metadata and PDF bytes, raising user-friendly errors for every failure mode."""
         if not DOC_ID_PATTERN.fullmatch(doc_id):
             raise AppError("invalid_doc_id", "The document ID is not valid.")
 

@@ -56,7 +56,3 @@ Thumbs.db
 # ---- Logs ----
 logs/
 *.log
-
-# ---- Local Claude Code settings ----
-.claude/settings.local.json
-.claude/.cc-writes/

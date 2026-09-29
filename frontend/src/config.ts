@@ -1,4 +1,3 @@
-// All frontend configuration comes from Vite env vars (see .env.example).
 // Nothing secret belongs here: every VITE_* value is bundled into public JavaScript.
 
 function numberFromEnv(value: string | undefined, fallback: number): number {

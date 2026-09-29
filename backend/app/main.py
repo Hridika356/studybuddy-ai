@@ -1,5 +1,3 @@
-"""FastAPI application factory."""
-
 from __future__ import annotations
 
 import logging
@@ -32,7 +30,7 @@ def _configure_logging(level: str) -> None:
 
 
 def create_app(settings: Settings | None = None, claude_client: Any | None = None) -> FastAPI:
-    """Build the app. Tests pass custom settings and a fake Claude client."""
+    """Tests pass custom settings and a fake Claude client."""
     settings = settings or get_settings()
     _configure_logging(settings.log_level)
 

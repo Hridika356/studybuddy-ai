@@ -153,9 +153,6 @@ def test_invalid_requests_do_not_consume_rate_limit(app_factory):
         assert ask(client, "0" * 32).status_code == 404
 
 
-# ---- follow-up history ------------------------------------------------------------------------
-
-
 def _history(n: int) -> list[dict]:
     return [{"question": f"Q{i}?", "answer": f"A{i}."} for i in range(1, n + 1)]
 

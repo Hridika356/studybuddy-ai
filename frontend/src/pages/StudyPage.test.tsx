@@ -164,7 +164,6 @@ describe('StudyPage main flow', () => {
     expect(screen.getByText('Question 1 of 5')).toBeInTheDocument()
     expect(mockedApi.generateQuiz).toHaveBeenCalledTimes(1)
 
-    // Back to chat keeps the chat UI available.
     await user.click(screen.getByRole('button', { name: /back to chat/i }))
     expect(screen.getByLabelText('Your question')).toBeVisible()
   })

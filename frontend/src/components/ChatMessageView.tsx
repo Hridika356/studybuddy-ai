@@ -7,7 +7,6 @@ interface ChatMessageViewProps {
   message: ChatMessage
   onRetry?: (question: string) => void
   retryDisabled?: boolean
-  /** When provided, citation chips become buttons that open the PDF at the cited page. */
   onOpenPage?: (range: PageRange) => void
 }
 

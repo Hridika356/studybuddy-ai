@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
-# Load backend/.env for local development. Real environment variables take precedence.
 load_dotenv(BACKEND_DIR / ".env", override=False)
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"

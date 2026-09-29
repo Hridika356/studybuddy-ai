@@ -21,9 +21,6 @@ def valid_quiz_json() -> str:
     return json.dumps({"questions": [make_question(i) for i in range(1, 6)]})
 
 
-# ---- parser -----------------------------------------------------------------------------------
-
-
 def test_parse_valid_quiz():
     quiz = parse_quiz(valid_quiz_json())
     assert len(quiz.questions) == 5
@@ -39,8 +36,8 @@ def test_parse_tolerates_code_fences_and_preamble():
     "payload",
     [
         "not json at all",
-        json.dumps({"questions": [make_question(i) for i in range(1, 5)]}),  # 4 questions
-        json.dumps({"questions": [make_question(i) for i in range(1, 7)]}),  # 6 questions
+        json.dumps({"questions": [make_question(i) for i in range(1, 5)]}),
+        json.dumps({"questions": [make_question(i) for i in range(1, 7)]}),
         json.dumps(
             {
                 "questions": [make_question(1, options=["a", "b", "c"])]
@@ -81,9 +78,6 @@ def test_parse_tolerates_code_fences_and_preamble():
 def test_parse_rejects_invalid_quizzes(payload):
     with pytest.raises(QuizParseError):
         parse_quiz(payload)
-
-
-# ---- endpoint ---------------------------------------------------------------------------------
 
 
 def test_quiz_endpoint_returns_five_valid_questions(client, fake_claude, uploaded_doc):

@@ -18,7 +18,6 @@ export function toPageRanges(pages: number[]): PageRange[] {
   return ranges
 }
 
-/** "p. 4" or "p. 4–5" (en dash). */
 export function formatPageRange({ start, end }: PageRange): string {
   return start === end ? `p. ${start}` : `p. ${start}–${end}`
 }

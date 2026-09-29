@@ -66,8 +66,6 @@ class ClaudeService:
         self._settings = settings
         self._client = client
 
-    # ---- client -----------------------------------------------------------------------------
-
     def _get_client(self) -> Any:
         if self._client is not None:
             return self._client
@@ -143,8 +141,6 @@ class ClaudeService:
             "cache_control": {"type": "ephemeral"},
         }
 
-    # ---- Q&A ---------------------------------------------------------------------------------
-
     def _qa_messages(
         self, pdf_bytes: bytes, title: str, question: str, history: list[ChatTurn]
     ) -> list[dict]:
@@ -189,8 +185,6 @@ class ClaudeService:
             )
         return parts
 
-    # ---- Quiz --------------------------------------------------------------------------------
-
     def generate_quiz(self, pdf_bytes: bytes, title: str) -> QuizResponse:
         messages: list[dict] = [
             {
@@ -202,7 +196,6 @@ class ClaudeService:
             }
         ]
 
-        # One initial attempt plus one correction attempt.
         for attempt in (1, 2):
             response = self._create_message(
                 max_tokens=self._settings.quiz_max_tokens,
