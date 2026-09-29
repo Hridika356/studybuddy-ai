@@ -1,4 +1,4 @@
-# StudyBuddy AI 
+# StudyBuddy AI
 
 A study helper for your lecture notes. Upload a PDF, ask questions about it, and get answers with page numbers so you can check where the answer came from. You can also take a quick quiz to test yourself.
 
@@ -6,20 +6,29 @@ I made this because I wanted an easier way to study from my own class slides.
 
 **Live demo:** https://studybuddy-ai-liart.vercel.app
 
+> Note: the backend is on Render's free plan, so it goes to sleep when nobody is using it. The first load can take up to a minute. You'll see "Waking server…" at the top while it starts.
+
 ## Screenshots
 
-**Ask questions with page citations**
-<img width="917" height="707" alt="Screenshot 2026-09-29 at 3 00 07 PM" src="https://github.com/user-attachments/assets/69e1caef-d2c0-41c7-be35-3ddb4801b0d4" />
+**Ask questions and get answers with page citations**
 
-<img width="903" height="774" alt="Screenshot 2026-09-29 at 2 57 59 PM" src="https://github.com/user-attachments/assets/971b0677-f778-4639-a39f-401749e885e2" />
+<p>
+  <img width="49%" alt="Asking a question" src="https://github.com/user-attachments/assets/69e1caef-d2c0-41c7-be35-3ddb4801b0d4" />
+  <img width="49%" alt="Answer with page citations" src="https://github.com/user-attachments/assets/971b0677-f778-4639-a39f-401749e885e2" />
+</p>
+
 **Practice quiz with instant feedback**
-<img width="876" height="781" alt="Screenshot 2026-09-29 at 2 52 24 PM" src="https://github.com/user-attachments/assets/3c6c0eec-d6ad-4360-9a6b-935378697f53" />
-<img width="934" height="786" alt="Screenshot 2026-09-29 at 2 51 58 PM" src="https://github.com/user-attachments/assets/3efbf329-ebf5-461f-ace5-b483d8ca8908" />
+
+<p>
+  <img width="49%" alt="Quiz question answered correctly" src="https://github.com/user-attachments/assets/3c6c0eec-d6ad-4360-9a6b-935378697f53" />
+  <img width="49%" alt="Quiz question with explanation" src="https://github.com/user-attachments/assets/3efbf329-ebf5-461f-ace5-b483d8ca8908" />
+</p>
 
 **See your score and what to review**
- <img width="835" height="793" alt="Screenshot 2026-09-29 at 2 53 11 PM" src="https://github.com/user-attachments/assets/a79ea138-a51d-46db-8f21-3ddedddbc7e2" />
 
-> Note: the backend is on Render's free plan, so it goes to sleep when nobody is using it. The first load can take up to a minute. You'll see "Waking server…" at the top while it starts.
+<p>
+  <img width="60%" alt="Quiz score screen" src="https://github.com/user-attachments/assets/a79ea138-a51d-46db-8f21-3ddedddbc7e2" />
+</p>
 
 ## Features
 
