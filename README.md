@@ -1,161 +1,114 @@
-# StudyBuddy AI
+# StudyBuddy AI 
 
-I built this to study from my own lecture slides. You upload a PDF, ask questions about it, and get
-answers that only use what's in the PDF, with page citations so you can check the source. It can also
-quiz you with 5 multiple-choice questions generated from the notes.
+A study helper for your lecture notes. Upload a PDF, ask questions about it, and get answers with page numbers so you can check where the answer came from. You can also take a quick quiz to test yourself.
 
-Live demo: https://studybuddy-ai-liart.vercel.app
+I made this because I wanted an easier way to study from my own class slides.
 
-The backend runs on Render's free tier, which sleeps when idle, so the first request can take 30 to 60
-seconds. The header shows "Waking server… up to 1 min" while it boots and retries on its own.
+**Live demo:** https://studybuddy-ai-liart.vercel.app
+
+> Note: the backend is on Render's free plan, so it goes to sleep when nobody is using it. The first load can take up to a minute. You'll see "Waking server…" at the top while it starts.
 
 ## Features
 
-- Upload a PDF by drag and drop or the file picker (up to 10 MB / 100 pages)
-- Ask questions and get answers with page chips like `p. 4` or `p. 4–5`
-- Click a chip to open your PDF at that page in a new tab
-- Ask follow-ups like "why?" or "give me an example" (the last 4 Q&A pairs are sent as context)
-- If the notes don't cover something, it says so instead of making things up
-- 5-question quiz, one question at a time, with explanations and a final score
-- Works on phone and laptop, light and dark mode, keyboard accessible
+- Upload a lecture PDF (drag and drop or pick a file)
+- Ask questions and get answers based only on your notes
+- Every answer shows page numbers like `p. 4`, and you can click them to open the PDF at that page
+- Ask follow-up questions like "explain that more simply"
+- If your notes don't cover something, it tells you instead of making things up
+- Take a 5-question multiple choice quiz with explanations and a final score
+- Works on phone and laptop, with light and dark mode
 
-<!-- Screenshots: upload screen, cited answer, quiz question, quiz results -->
+## Built with
 
-## Tech stack
-
-- Frontend: React 19, TypeScript, Vite, plain CSS, Vitest + Testing Library
-- Backend: Python, FastAPI, Pydantic, pypdf, SQLite
-- AI: Anthropic Python SDK with Claude Haiku 4.5 (configurable)
-- Hosting: Vercel (frontend) and Render (backend)
+- **Frontend:** React, TypeScript, Vite
+- **Backend:** Python, FastAPI, SQLite
+- **AI:** Claude API (Claude Haiku 4.5)
+- **Hosting:** Vercel (frontend) and Render (backend)
 
 ## How it works
 
-```mermaid
-flowchart LR
-    B[React app] -->|/upload /ask /quiz| API[FastAPI]
-    API --> DB[(SQLite metadata)]
-    API --> FS[PDF files on disk]
-    API -->|PDF + question| C[Claude API]
-```
+1. You upload a PDF. The backend checks that it's a real PDF and saves it.
+2. When you ask a question, the backend sends the PDF and your question to Claude with citations turned on. Claude answers using only the PDF and tells us which pages it used.
+3. For the quiz, Claude sends back the questions as JSON. The backend checks the format, and if something is wrong it asks Claude to fix it once.
+4. The API key stays on the backend, so the browser never sees it.
 
-- Upload: the backend checks the file really is a readable PDF, saves it under a random ID, and stores
-  the metadata in SQLite.
-- Questions: the whole PDF goes to Claude as a document block with citations turned on. No vector
-  database or chunking, since lecture notes are small enough to send in full. Claude returns text
-  blocks with page citations, and `citation_parser.py` turns them into `{"parts": [{"text", "pages"}]}`
-  for the frontend. Follow-ups send up to 4 earlier turns as `history`.
-- Quiz: Claude is asked for strict JSON, which gets validated with Pydantic (exactly 5 questions,
-  4 distinct options, and an answer that's one of the options). If it's invalid, I retry once with the
-  error message. Options are shuffled because the model likes to put the right answer first.
-- The API key only lives on the backend. The browser never sees it.
+## Run it locally
 
-## Project structure
+You'll need **Python 3.11+** and **Node 20+**.
 
-```
-backend/
-  app/
-    routes/      thin FastAPI handlers
-    services/    claude_service (all Claude calls), citation_parser, quiz_parser, storage
-    schemas/     Pydantic request/response models
-    db/          SQLite repository
-  tests/         pytest, Claude is always mocked
-frontend/
-  src/
-    components/  UploadCard, ChatPanel, CitationChip, QuizPanel, ...
-    pages/       StudyPage (main state)
-    services/    api.ts, every backend call goes through here
-render.yaml      Render config for the backend
-```
-
-## Running it locally
-
-You need Python 3.11+ and Node 20.19+.
-
+**1. Clone the repo**
 ```bash
-# backend
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
-cp .env.example .env        # add your ANTHROPIC_API_KEY
-uvicorn app.main:app --reload --port 8000
+git clone https://github.com/Hridika356/studybuddy-ai.git
+cd studybuddy-ai
+```
 
-# frontend (in another terminal)
+**2. Start the backend**
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env        # then add your ANTHROPIC_API_KEY in .env
+uvicorn app.main:app --reload --port 8000
+```
+
+**3. Start the frontend** (in a new terminal)
+```bash
 cd frontend
 npm install
-cp .env.example .env.local  # VITE_API_BASE_URL=http://localhost:8000
-npm run dev                 # http://localhost:5173
+cp .env.example .env.local
+npm run dev
 ```
 
-Without an API key, uploads still work and `/ask` and `/quiz` return a "not configured" error.
+Open http://localhost:5173 and you're good to go.
 
-Tests:
-
+**Run the tests**
 ```bash
-cd backend && pytest -q && ruff check .
-cd frontend && npm run lint && npm run typecheck && npm test && npm run build
+cd backend && pytest
+cd frontend && npm test
 ```
 
 ## Environment variables
 
-Backend (`backend/.env`):
+**Backend** (`backend/.env`)
 
-| Variable | Default | Notes |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | none | Required for questions and quizzes |
-| `ANTHROPIC_MODEL` | `claude-haiku-4-5-20251001` | Needs PDF + citation support |
-| `ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated frontend URLs for CORS |
-| `MAX_PDF_SIZE_MB` / `MAX_PDF_PAGES` | `10` / `100` | Upload limits |
-| `MAX_QUESTION_LENGTH` | `1000` | Characters |
-| `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` | `10` / `60` | Per-IP limit on AI calls |
+| Name | What it's for |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Your Claude API key (required) |
+| `ALLOWED_ORIGINS` | Frontend URL(s) allowed to call the API |
+| `MAX_PDF_SIZE_MB` | Max upload size (default 10) |
+| `MAX_PDF_PAGES` | Max pages (default 100) |
 
-There are a few more (timeouts, token caps, storage paths) in `backend/.env.example`.
+There are a few more options in `backend/.env.example`.
 
-Frontend (`frontend/.env.local`): `VITE_API_BASE_URL`, the backend URL with no trailing slash. It's
-baked into the build, so it has to be set before building.
+**Frontend** (`frontend/.env.local`)
+
+| Name | What it's for |
+| --- | --- |
+| `VITE_API_BASE_URL` | Backend URL, like `http://localhost:8000` |
 
 ## Deployment
 
-- Backend on Render: New → Blueprint and pick this repo. `render.yaml` sets everything up, and Render
-  asks for `ANTHROPIC_API_KEY` and `ALLOWED_ORIGINS`.
-- Frontend on Vercel: import the repo with `frontend` as the root directory and set
-  `VITE_API_BASE_URL` to the Render URL. Then add the Vercel URL to `ALLOWED_ORIGINS` on Render.
-
-## Security
-
-- The API key is only in the backend's environment. It's never logged or sent to the browser.
-- `.env` files are gitignored.
-- Uploads are stored under random IDs, and the original filename is only used for display.
-- Errors come back as clean JSON without stack traces or file paths.
-- CORS only allows the frontend's origin.
+- **Backend (Render):** create a new Blueprint from this repo. It uses `render.yaml`. Add your `ANTHROPIC_API_KEY` and `ALLOWED_ORIGINS`.
+- **Frontend (Vercel):** import the repo, set the root folder to `frontend`, and add `VITE_API_BASE_URL` with your Render URL.
 
 ## What I learned
 
-- Claude's PDF citations give `start_page_number` and `end_page_number`, and the end is exclusive. So
-  a citation from page 2 comes back as 2 to 3. If you read it as inclusive, every chip shows one page
-  too many. I checked this against real API responses before trusting it.
-- Asking for JSON isn't the same as getting valid JSON. I validate the quiz with Pydantic and retry
-  once with the exact validation error. In my testing it passed on the first try every time, but the
-  retry is cheap insurance.
-- Prompt caching the PDF made follow-up questions noticeably faster and cheaper (about 9k tokens read
-  from cache on the second question). It only works if the cached prefix is identical, which is why
-  follow-up history goes after the document instead of before it.
-- Free hosting has cold starts. The header used to say "Server offline" while Render was just waking
-  up, so now it shows a waking status and keeps retrying for up to 90 seconds.
+- Claude's page citations use an "exclusive" end page, so page 2 comes back as 2 to 3. I had to handle that or every citation would show one extra page.
+- Asking an AI for JSON doesn't always mean you get valid JSON, so it's worth checking it and having a backup plan.
+- Prompt caching makes follow-up questions faster and cheaper because the PDF doesn't have to be processed again.
+- Free hosting sleeps, so the app needs to handle slow starts nicely instead of just showing an error.
 
-## Known limitations
+## Limitations
 
-- Render's free disk resets on every restart or deploy, so uploaded PDFs disappear and you have to
-  upload again.
-- Rate limiting is in memory, so it resets on restart and wouldn't work across multiple servers.
-- The whole PDF is sent with every question, which caps it at 100 pages.
-- Follow-ups only see the last 4 turns.
-- Chat history is lost when you refresh. There are no accounts.
-- Jumping to a cited page depends on the browser's PDF viewer. Some mobile browsers open page 1.
-- Answers from scanned, image-only PDFs can be less accurate.
+- Uploaded PDFs get deleted when the free Render server restarts, so you may need to upload again.
+- PDFs are limited to 100 pages and 10 MB.
+- Chat history clears when you refresh the page. There are no user accounts yet.
+- Scanned PDFs (just images, no text) may give less accurate answers.
 
 ## Future ideas
 
-- In-app PDF.js viewer that highlights the cited passage
-- Streaming answers
-- Accounts and saved documents
-- Multiple PDFs per session and flashcards
+- A built-in PDF viewer that highlights the exact sentence
+- Show answers as they're being written (streaming)
+- User accounts to save your PDFs
+- Flashcards and support for multiple PDFs at once
